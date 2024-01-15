@@ -1,13 +1,15 @@
 #!/usr/bin/python3
-"""This is the place class"""
-from sqlalchemy.ext.declarative import declarative_base
-from models.base_model import BaseModel, Base
-from sqlalchemy import Column, Table, String, Integer, Float, ForeignKey
-from sqlalchemy.orm import relationship
+""" This is the Place Module for HBNB project """
 from os import getenv
 import models
+from models.base_model import BaseModel, Base
+from sqlalchemy import Column, Table, String, Integer, Float, ForeignKey
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 
 
+# Defining the association table for the many-to-many relationship
+# between Place and Amenity
 place_amenity = Table("place_amenity", Base.metadata,
                       Column("place_id", String(60),
                              ForeignKey("places.id"),
@@ -20,19 +22,21 @@ place_amenity = Table("place_amenity", Base.metadata,
 
 
 class Place(BaseModel, Base):
-    """This is the class for Place
+    """
+    This is the Place class
+
     Attributes:
-        city_id: city id
-        user_id: user id
-        name: name input
-        description: string of description
-        number_rooms: number of room in int
-        number_bathrooms: number of bathrooms in int
-        max_guest: maximum guest in int
-        price_by_night:: pice for a staying in int
-        latitude: latitude in flaot
-        longitude: longitude in float
-        amenity_ids: list of Amenity ids
+        city_id: The city id
+        user_id: The user id
+        name: The name input
+        description: The description string
+        number_rooms(int) : The number of room
+        number_bathrooms(int): The number of bathrooms
+        max_guest(int): The maximum number of guests
+        price_by_night(int): The price for a staying
+        latitude(float): The latitude
+        longitude(float): The longitude
+        amenity_ids(list): The list of Amenity ids
     """
     __tablename__ = "places"
     city_id = Column(String(60), ForeignKey("cities.id"), nullable=False)
@@ -48,6 +52,7 @@ class Place(BaseModel, Base):
     amenity_ids = []
 
     if getenv("HBNB_TYPE_STORAGE") == "db":
+        # Relationship with Review and Amenity for database storage
         reviews = relationship("Review", cascade='all, delete, delete-orphan',
                                backref="place")
 
@@ -57,27 +62,40 @@ class Place(BaseModel, Base):
     else:
         @property
         def reviews(self):
-            """ Returns list of reviews.id """
-            var = models.storage.all()
-            lista = []
+            """
+            This method returns a list of reviews.id for non-database storage
+            """
+            # Getting all the objects from non-database storage
+            all_objects = models.storage.all()
+            reviews_list = []
             result = []
-            for key in var:
-                review = key.replace('.', ' ')
-                review = shlex.split(review)
-                if (review[0] == 'Review'):
-                    lista.append(var[key])
-            for elem in lista:
-                if (elem.place_id == self.id):
-                    result.append(elem)
-            return (result)
+
+            # Filtering and appending reviews to the list
+            for key in all_objects:
+                # Replacing the dot with a space
+                # and splitting the key into parts
+                obj_parts = key.replace('.', ' ').split()
+                if obj_parts[0] == 'Review':
+                    reviews_list.append(all_objects[key])
+
+            # Filtering the reviews based on place_id and appending to result
+            for review in reviews_list:
+                if review.place_id == self.id:
+                    result.append(review)
+            return result
 
         @property
         def amenities(self):
-            """ Returns list of amenity ids """
+            """
+            This method returns a list of amenity ids for non-database storage
+            """
             return self.amenity_ids
 
         @amenities.setter
         def amenities(self, obj=None):
-            """ Appends amenity ids to the attribute """
-            if type(obj) is Amenity and obj.id not in self.amenity_ids:
+            """
+            This setter method appends amenity ids to the attribute
+            for non-database storage
+            """
+            if isinstance(obj, Amenity) and obj.id not in self.amenity_ids:
                 self.amenity_ids.append(obj.id)

@@ -1,83 +1,84 @@
 #!/usr/bin/python3
-"""This is the base model class for AirBnB"""
+"""ThIs module defines a base class for all models in our hbnb clone"""
 from sqlalchemy.ext.declarative import declarative_base
-import uuid
 import models
+from uuid import uuid4
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column
+from sqlalchemy import DateTime
+from sqlalchemy import String
 
-
+# Creating a declarative base for SQLAlchemy
 Base = declarative_base()
 
 
 class BaseModel:
-    """This class will defines all common attributes/methods
-    for other classes
-    """
-    id = Column(String(60), unique=True, nullable=False, primary_key=True)
-    created_at = Column(DateTime, nullable=False, default=(datetime.utcnow()))
-    updated_at = Column(DateTime, nullable=False, default=(datetime.utcnow()))
+    """This class is a base class for all the hbnb models"""
+
+    # Unique ID for the model, 60 characters, primary key, cannot be null
+    id = Column(String(60), primary_key=True, nullable=False)
+
+    # Timestamp for when the instance was created, cannot be null
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow())
+
+    # Timestamp for when the instance was last updated, cannot be null
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow())
 
     def __init__(self, *args, **kwargs):
-        """Instantiation of base model class
-        Args:
-            args: it won't be used
-            kwargs: arguments for the constructor of the BaseModel
-        Attributes:
-            id: unique id generated
-            created_at: creation date
-            updated_at: updated date
-        """
-        if kwargs:
-            for key, value in kwargs.items():
-                if key == "created_at" or key == "updated_at":
-                    value = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
-                if key != "__class__":
-                    setattr(self, key, value)
-            if "id" not in kwargs:
-                self.id = str(uuid.uuid4())
-            if "created_at" not in kwargs:
-                self.created_at = datetime.now()
-            if "updated_at" not in kwargs:
-                self.updated_at = datetime.now()
-        else:
-            self.id = str(uuid.uuid4())
+        """ This method instantiates a new model"""
+        if not kwargs:
+            # Generating a unique ID
+            self.id = str(uuid4())
+            # Setting the 'created_at','updated_at' timestamps to current time
             self.created_at = self.updated_at = datetime.now()
+        else:
+            for key, value in kwargs.items():
+                if key == 'created_at':
+                    # Converting the 'created_at' timestamp to a datetime obj
+                    value = datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%f')
+                if key == 'updated_at':
+                    # Converting the 'updated_at' timestamp to a datetime obj
+                    value = datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%f')
+                if key != "__class__":
+                    # Setting the attributes based on key-value pairs in kwargs
+                    setattr(self, key, value)
 
     def __str__(self):
-        """returns a string
-        Return:
-            returns a string of class name, id, and dictionary
-        """
-        return "[{}] ({}) {}".format(
-            type(self).__name__, self.id, self.__dict__)
-
-    def __repr__(self):
-        """return a string representaion
-        """
-        return self.__str__()
+        """This method returns a string representation of the instance"""
+        # Getting the class name as a string
+        d = self.__dict__.copy()
+        # Remove SQLAlchemys internal state attribute
+        d.pop('_sa_instance_state', None)
+        # Returning the formatted string representation of the instance
+        return "[{}] ({}) {}".format(type(self).__name__, self.id, d)
 
     def save(self):
-        """updates the public instance attribute updated_at to current
+        """This method updates 'updated_at' with the current time
+        and saves the instance
         """
+        from models.__init__ import storage
+        # Updating the 'updated_at' timestamp to the current time
         self.updated_at = datetime.now()
+        # Adding the new instance to the storage
         models.storage.new(self)
+        # Saving the instance using the storage
         models.storage.save()
 
     def to_dict(self):
-        """creates dictionary of the class  and returns
-        Return:
-            returns a dictionary of all the key values in __dict__
-        """
-        my_dict = dict(self.__dict__)
-        my_dict["__class__"] = str(type(self).__name__)
-        my_dict["created_at"] = self.created_at.isoformat()
-        my_dict["updated_at"] = self.updated_at.isoformat()
-        if '_sa_instance_state' in my_dict.keys():
-            del my_dict['_sa_instance_state']
-        return my_dict
+        """This method converts the instance into a dictionary format"""
+        d = self.__dict__.copy()
+        # Add the class name to the dictionary
+        d["__class__"] = str(type(self).__name__)
+        # Formatting the 'created_at''updated_at' timestamps as ISO strings
+        d['created_at'] = self.created_at.isoformat()
+        d['updated_at'] = self.updated_at.isoformat()
+        # Removing SQLAlchemy internal state attribute
+        d.pop('_sa_instance_state', None)
+        # Returning a dictionary representation of the instance
+        return d
 
     def delete(self):
-        """ delete object
-        """
+        """This method deletes the current instance from storage"""
+        from models.__init__ import storage
+        # Deleting the instance from the storage
         models.storage.delete(self)

@@ -2,14 +2,17 @@
 """ Console Module """
 import cmd
 import sys
+from datetime import datetime
+import models
+from models.amenity import Amenity
 from models.base_model import BaseModel
 from models.__init__ import storage
-from models.user import User
-from models.place import Place
-from models.state import State
 from models.city import City
-from models.amenity import Amenity
+from models.place import Place
 from models.review import Review
+from models.state import State
+from models.user import User
+import shlex
 
 
 class HBNBCommand(cmd.Cmd):
@@ -114,23 +117,55 @@ class HBNBCommand(cmd.Cmd):
         pass
 
     def do_create(self, args):
-        """ Create an object of any class"""
-        try:
-            if not args:
-                raise SyntaxError()
-            arg_list = args.split(" ")
-            kw = {}
-            for arg in arg_list[1:]:
-                arg_splited = arg.split("=")
-                arg_splited[1] = eval(arg_splited[1])
-                if type(arg_splited[1]) is str:
-                    arg_splited[1] = arg_splited[1].replace("_", " ").replace('"', '\\"')
-                kw[arg_splited[0]] = arg_splited[1]
-        except SyntaxError:
+        """ Create an object of any class with given parameters """
+        if not args:
             print("** class name missing **")
-        except NameError:
+            return
+
+        arg_list = shlex.split(args)
+        class_name = arg_list[0]
+
+        if class_name not in HBNBCommand.classes:
             print("** class doesn't exist **")
-        new_instance = HBNBCommand.classes[arg_list[0]](**kw)
+            return
+
+        param_dict = {}
+        for param in arg_list[1:]:
+            param_parts = param.split('=')
+            if len(param_parts) != 2:
+                print(f"Invalid parameter: {param}")
+                continue
+
+            key, value = param_parts
+
+            # Handle string values enclosed in double quotes
+            if value.startswith('"') and value.endswith('"'):
+                value = value[1:-1].replace('_', ' ').replace('\\"', '"')
+
+            # Convert to float if it contains a dot (.)
+            if '.' in value:
+                try:
+                    value = float(value)
+                except ValueError:
+                    print(f"Invalid float value: {param}")
+                    continue
+            else:
+                # Convert to int if it's an integer
+                try:
+                    value = int(value)
+                except ValueError:
+                    pass
+
+            param_dict[key] = value
+
+        # Check if "name" is part of the parameters,
+        #and set it to the name attribute
+
+        if 'name' in param_dict:
+            name = param_dict['name']
+            param_dict['name'] = name  # Set 'name' attribute
+
+        new_instance = HBNBCommand.classes[class_name](**param_dict)
         new_instance.save()
         print(new_instance.id)
 
@@ -214,11 +249,15 @@ class HBNBCommand(cmd.Cmd):
             if args not in HBNBCommand.classes:
                 print("** class doesn't exist **")
                 return
-            for k, v in storage.all(HBNBCommand.classes[args]).items():
-                print_list.append(str(v))
+            # for k, v in storage._FileStorage__objects.items():
+            for k, v in storage.all().items():
+                if k.split('.')[0] == args:
+                    print_list.append(str(v))
         else:
+            # for k, v in storage._FileStorage__objects.items():
             for k, v in storage.all().items():
                 print_list.append(str(v))
+
         print(print_list)
 
     def help_all(self):
@@ -325,6 +364,7 @@ class HBNBCommand(cmd.Cmd):
         """ Help information for the update class """
         print("Updates an object with new information")
         print("Usage: update <className> <id> <attName> <attVal>\n")
+
 
 if __name__ == "__main__":
     HBNBCommand().cmdloop()

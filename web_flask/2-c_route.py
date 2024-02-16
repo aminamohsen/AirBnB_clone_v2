@@ -5,7 +5,7 @@ app = Flask(__name__)
 
 
 @app.route('/', strict_slashes=False)
-def hello_hbn():
+def hello_hbnb():
     """ it Returns Hello HBNB! from 0.0.0.0:5000 """
     return "Hello HBNB!"
 
@@ -24,4 +24,4 @@ def c_route(text):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0')
+    app.run(host='0.0.0.0',port=5000)
